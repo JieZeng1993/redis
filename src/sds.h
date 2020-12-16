@@ -102,6 +102,7 @@ static inline size_t sdslen(const sds s) {
 }
 
 static inline size_t sdsavail(const sds s) {
+    //之所以是-1，是因为sds是字符串指针，所以-1代表s前一个字节的地址，在观察sdshdr的结构，不难得出sds s其实就是char buf【】,所以s的前一个字节对应的地址就是flags的地址
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
         case SDS_TYPE_5: {
