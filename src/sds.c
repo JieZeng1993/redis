@@ -434,11 +434,21 @@ sds sdsgrowzero(sds s, size_t len) {
  *
  * After the call, the passed sds string is no longer valid and all the
  * references must be substituted with the new pointer returned by the call. */
+/**
+ * s 与 *t（长度为len） 进行字符串拼接
+ *
+ * 由于拼接时可能进行字符串扩容，所以新的字符串的地址不一定传入的一致，所以之前的字符串可能无法再次使用了
+ * @param s 被拼接的字符串
+ * @param t 拼接的字符串
+ * @param len 拼接字符串的长度
+ * @return 返回新的字符串
+ */
 sds sdscatlen(sds s, const void *t, size_t len) {
     size_t curlen = sdslen(s);
 
     s = sdsMakeRoomFor(s,len);
     if (s == NULL) return NULL;
+    /*s为分配后地址，加上curlen能够获取到当前字符串最后一位，就是拼接的前一位*/
     memcpy(s+curlen, t, len);
     sdssetlen(s, curlen+len);
     s[curlen+len] = '\0';
@@ -998,6 +1008,9 @@ int hex_digit_to_int(char c) {
  * quotes or closed quotes followed by non space characters
  * as in: "foo"bar or "foo'
  */
+/*
+ * 使用空白字符串进行风格，sds为返回的sds指针， argc为返回sds指针的数量
+ * */
 sds *sdssplitargs(const char *line, int *argc) {
     const char *p = line;
     char *current = NULL;
@@ -1088,6 +1101,7 @@ sds *sdssplitargs(const char *line, int *argc) {
                 if (*p) p++;
             }
             /* add the token to the vector */
+            /*加一个字符串，重新分配内存*/
             vector = s_realloc(vector,((*argc)+1)*sizeof(char*));
             vector[*argc] = current;
             (*argc)++;
