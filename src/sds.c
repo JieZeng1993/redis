@@ -229,6 +229,12 @@ void sdsclear(sds s) {
  *
  * Note: this does not change the *length* of the sds string as returned
  * by sdslen(), but only the free buffer space we have. */
+/* 流程1: 首先检查可用sds的空间是否无需扩容，如果无需扩容， 返回。
+ * 流程2：计算扩容大小，如果小于SDS_MAX_PREALLOC，则扩容至要求大小的两倍，否则扩容为要求大小+SDS_MAX_PREALLOC
+ * 流程3：根据扩容后的大小计算对应的sdshdr的type，如比较oldtype和type，如果相同，则使用realloc,否则使用malloc
+ * 流程4：如果使用malloc需要copy源s的值，并释放s的空间，设置sdshdr的len
+ * 流程5：设置sdshdr的alloc
+ */
 sds sdsMakeRoomFor(sds s, size_t addlen) {
     void *sh, *newsh;
     size_t avail = sdsavail(s);
@@ -238,6 +244,7 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
     size_t usable;
 
     /* Return ASAP if there is enough space left. */
+    /*TODO 我觉得这一行应该挪到size_t avail = sdsavail(s);之后*/
     if (avail >= addlen) return s;
 
     len = sdslen(s);
@@ -273,6 +280,7 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
     }
     usable = usable-hdrlen-1;
     if (usable > sdsTypeMaxSize(type))
+        /*按理说不会进入这个代码，如果进入是否意味着内存泄露*/
         usable = sdsTypeMaxSize(type);
     sdssetalloc(s, usable);
     return s;

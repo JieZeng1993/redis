@@ -49,9 +49,13 @@ struct __attribute__ ((__packed__)) sdshdr5 {
     char buf[];
 };
 struct __attribute__ ((__packed__)) sdshdr8 {
+    /*buf实际使用的大小，有可能alloc为200， 实际使用为100*/
     uint8_t len; /* used */
+    /*buf不扩容时，buf的大小-1，*/
     uint8_t alloc; /* excluding the header and null terminator */
+    /*标记当前到底是sdshdr8,16*/
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
+    /*存储数据*/
     char buf[];
 };
 struct __attribute__ ((__packed__)) sdshdr16 {
