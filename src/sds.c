@@ -1010,6 +1010,7 @@ int hex_digit_to_int(char c) {
  */
 /*
  * 使用空白字符串进行风格，sds为返回的sds指针， argc为返回sds指针的数量
+ * 会解析 "\xff" "\n" ''
  * */
 sds *sdssplitargs(const char *line, int *argc) {
     const char *p = line;
@@ -1032,14 +1033,16 @@ sds *sdssplitargs(const char *line, int *argc) {
                     if (*p == '\\' && *(p+1) == 'x' &&
                                              is_hex_digit(*(p+2)) &&
                                              is_hex_digit(*(p+3)))
+                        /*解析 "\xff"*/
                     {
                         unsigned char byte;
-
+                        /* *16 用 << 4 替代 是否更好*/
                         byte = (hex_digit_to_int(*(p+2))*16)+
                                 hex_digit_to_int(*(p+3));
                         current = sdscatlen(current,(char*)&byte,1);
                         p += 3;
                     } else if (*p == '\\' && *(p+1)) {
+                        /*解析 "\n" 这种*/
                         char c;
 
                         p++;
@@ -1053,6 +1056,7 @@ sds *sdssplitargs(const char *line, int *argc) {
                         }
                         current = sdscatlen(current,&c,1);
                     } else if (*p == '"') {
+                        /*双引号关闭时 后面必须为空格或者直接结束*/
                         /* closing quote must be followed by a space or
                          * nothing at all. */
                         if (*(p+1) && !isspace(*(p+1))) goto err;
