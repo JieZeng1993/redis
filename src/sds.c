@@ -507,15 +507,17 @@ int sdsll2str(char *s, long long value) {
     v = (value < 0) ? -value : value;
     p = s;
     do {
+        /*十进制的数 进行字符串 到数的转换 */
         *p++ = '0'+(v%10);
         v /= 10;
     } while(v);
     if (value < 0) *p++ = '-';
-
+    /*此时， value 如果为 -64.  那么s的值为 "46-"*/
     /* Compute length and add null term. */
     l = p-s;
     *p = '\0';
 
+    /*反转数字*/
     /* Reverse the string. */
     p--;
     while(s < p) {
