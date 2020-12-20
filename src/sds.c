@@ -416,6 +416,9 @@ void sdsIncrLen(sds s, ssize_t incr) {
  *
  * if the specified length is smaller than the current length, no operation
  * is performed. */
+/**
+ * s 增加len长度， len全部由0（对应空白符）赋值
+ */
 sds sdsgrowzero(sds s, size_t len) {
     size_t curlen = sdslen(s);
 
@@ -577,6 +580,11 @@ sds sdsfromlonglong(long long value) {
 }
 
 /* Like sdscatprintf() but gets va_list instead of being variadic. */
+/**
+ * fmt为待格式化的字符串，ap 是 替代数据，
+ *
+ * 格式化完成后拼接到s后面
+ */
 sds sdscatvprintf(sds s, const char *fmt, va_list ap) {
     va_list cpy;
     char staticbuf[1024], *buf = staticbuf, *t;
@@ -596,12 +604,14 @@ sds sdscatvprintf(sds s, const char *fmt, va_list ap) {
      * fit the string in the current buffer size. */
     while(1) {
         va_copy(cpy,ap);
+        /*vsnprintf 预申请的内存，如果够到就返回buf，如果不够就返回所需的长度*/
         bufstrlen = vsnprintf(buf, buflen, fmt, cpy);
         va_end(cpy);
         if (bufstrlen < 0) {
             if (buf != staticbuf) s_free(buf);
             return NULL;
         }
+        /*buf 不够需要重新生成 bufstrlen长度的buf，然后continue，再次执行*/
         if (((size_t)bufstrlen) >= buflen) {
             if (buf != staticbuf) s_free(buf);
             buflen = ((size_t)bufstrlen) + 1;
@@ -637,6 +647,7 @@ sds sdscatvprintf(sds s, const char *fmt, va_list ap) {
 sds sdscatprintf(sds s, const char *fmt, ...) {
     va_list ap;
     char *t;
+    /*fmt为可变参数前一个参数，根据栈的位置就能找到所有的可变参数*/
     va_start(ap, fmt);
     t = sdscatvprintf(s,fmt,ap);
     va_end(ap);
