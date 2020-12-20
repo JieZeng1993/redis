@@ -88,6 +88,8 @@ static void (*zmalloc_oom_handler)(size_t) = zmalloc_default_oom;
 
 /* Try allocating memory, and return NULL if failed.
  * '*usable' is set to the usable size if non NULL. */
+/*ztrymalloc_usable 和 zmalloc_usable 的区别在与 ztrymalloc_usable内存不够返回NULL，而zmalloc_usable会oom
+ * */
 void *ztrymalloc_usable(size_t size, size_t *usable) {
     void *ptr = malloc(size+PREFIX_SIZE);
 

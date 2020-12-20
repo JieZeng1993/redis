@@ -497,6 +497,12 @@ sds sdscpy(sds s, const char *t) {
  * The function returns the length of the null-terminated string
  * representation stored at 's'. */
 #define SDS_LLSTR_SIZE 21
+/**
+ * 讲数字转换为字符串
+ * @param s 结果返回
+ * @param value 需要转为字符串的数字
+ * @return s的长度
+ */
 int sdsll2str(char *s, long long value) {
     char *p, aux;
     unsigned long long v;
