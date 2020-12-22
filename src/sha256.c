@@ -86,6 +86,7 @@ void sha256_init(SHA256_CTX *ctx)
 {
 	ctx->datalen = 0;
 	ctx->bitlen = 0;
+	/*sha256 算法 8个哈希初始值,初值是对自然数中前8个质数（2,3,5,7,11,13,17,19）的平方根的小数部分取前32bit, 见https://blog.csdn.net/u011583927/article/details/80905740*/
 	ctx->state[0] = 0x6a09e667;
 	ctx->state[1] = 0xbb67ae85;
 	ctx->state[2] = 0x3c6ef372;

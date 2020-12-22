@@ -242,6 +242,7 @@ int dictRehash(dict *d, int n) {
 
     /* Check if we already rehashed the whole table... */
     if (d->ht[0].used == 0) {
+        //rehash完成后，释放老的ht中的table，后将ht[1]与ht[0]对调，然后对ht[1]重新初始化
         zfree(d->ht[0].table);
         d->ht[0] = d->ht[1];
         _dictReset(&d->ht[1]);
@@ -1008,6 +1009,7 @@ static int _dictExpandIfNeeded(dict *d)
 }
 
 /* Our hash table capability is a power of two */
+/* 由于redis使用的hash表的大小必须是2的幂，所以size不一定是真正的大小，但是会比size大，除非超过最大值LONG_MAX*/
 static unsigned long _dictNextPower(unsigned long size)
 {
     unsigned long i = DICT_HT_INITIAL_SIZE;
