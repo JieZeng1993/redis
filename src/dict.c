@@ -514,6 +514,7 @@ dictEntry *dictFind(dict *d, const void *key)
     if (dictSize(d) == 0) return NULL; /* dict is empty */
     if (dictIsRehashing(d)) _dictRehashStep(d);
     h = dictHashKey(d, key);
+    /*算出hash值后，先在dt[0]找，找不到在再ht[1]中找*/
     for (table = 0; table <= 1; table++) {
         idx = h & d->ht[table].sizemask;
         he = d->ht[table].table[idx];
