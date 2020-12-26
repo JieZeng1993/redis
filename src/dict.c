@@ -606,6 +606,7 @@ dictEntry *dictNext(dictIterator *iter)
             }
             iter->index++;
             if (iter->index >= (long) ht->size) {
+                //先迭代ht[0],迭代完成再进行切换
                 if (dictIsRehashing(iter->d) && iter->table == 0) {
                     iter->table++;
                     iter->index = 0;
