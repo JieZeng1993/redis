@@ -743,13 +743,14 @@ unsigned char *ziplistResize(unsigned char *zl, unsigned int len) {
  *
  * The pointer "p" points to the first entry that does NOT need to be
  * updated, i.e. consecutive fields MAY need an update. */
+/*prevlen的长度发生变更，导致整个entry大小变更，可能导致后续的entry的prevlen都发生变化*/
 unsigned char *__ziplistCascadeUpdate(unsigned char *zl, unsigned char *p) {
     zlentry cur;
     size_t prevlen, prevlensize, prevoffset; /* Informat of the last changed entry. */
     size_t firstentrylen; /* Used to handle insert at head. */
     size_t rawlen, curlen = intrev32ifbe(ZIPLIST_BYTES(zl));
     size_t extra = 0, cnt = 0, offset;
-    size_t delta = 4; /* Extra bytes needed to update a entry's prevlen (5-1). */
+            size_t delta = 4; /* Extra bytes needed to update a entry's prevlen (5-1). */
     unsigned char *tail = zl + intrev32ifbe(ZIPLIST_TAIL_OFFSET(zl));
 
     /* Empty ziplist */
@@ -775,6 +776,7 @@ unsigned char *__ziplistCascadeUpdate(unsigned char *zl, unsigned char *p) {
             } else {
                 /* This would result in shrinking, which we want to avoid.
                  * So, set "prevlen" in the available bytes. */
+                /*prevlensize 大于 应当使用的大小，避免收缩，直接调用zipStorePrevEntryLengthLarge方法*/
                 zipStorePrevEntryLengthLarge(p, prevlen);
             }
             break;
@@ -815,6 +817,7 @@ unsigned char *__ziplistCascadeUpdate(unsigned char *zl, unsigned char *p) {
     offset = p - zl;
     zl = ziplistResize(zl, curlen + extra);
     p = zl + offset;
+    //从后面开始移动
     memmove(p + extra, p, curlen - offset - 1);
     p += extra;
 
@@ -826,6 +829,7 @@ unsigned char *__ziplistCascadeUpdate(unsigned char *zl, unsigned char *p) {
         memmove(p - (rawlen - cur.prevrawlensize), 
                 zl + prevoffset + cur.prevrawlensize, 
                 rawlen - cur.prevrawlensize);
+        //从后面往前赋值
         p -= (rawlen + delta);
         if (cur.prevrawlen == 0) {
             /* "cur" is the previous head entry, update its prevlen with firstentrylen. */
@@ -930,10 +934,13 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
     zlentry tail;
 
     /* Find out prevlen for the entry that is inserted. */
+    /*prevlensize可以通过prevlen算出*/
     if (p[0] != ZIP_END) {
+        //解析插入点p的 prevlen
         ZIP_DECODE_PREVLEN(p, prevlensize, prevlen);
     } else {
         unsigned char *ptail = ZIPLIST_ENTRY_TAIL(zl);
+        //判断ptail是结束标记，数据为空， prevlen = 0 ， 否则通过解析ptail出prevlen
         if (ptail[0] != ZIP_END) {
             prevlen = zipRawEntryLengthSafe(zl, curlen, ptail);
         }
@@ -958,6 +965,7 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
      * its prevlen field. */
     int forcelarge = 0;
     nextdiff = (p[0] != ZIP_END) ? zipPrevLenByteDiff(p,reqlen) : 0;
+    /* nextdiff==-4 只可能是1-5，也就是插入位置的前一个entry长度需要用5个字节表示，那么插入的entry的reqlen肯定大于5，所以这个if判断永远都为假*/
     if (nextdiff == -4 && reqlen < 4) {
         nextdiff = 0;
         forcelarge = 1;
@@ -972,6 +980,8 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
     /* Apply memory move when necessary and update tail offset. */
     if (p[0] != ZIP_END) {
         /* Subtract one because of the ZIP_END bytes */
+        //更好的处理，SRC应该为p+ prevlen (前面的长度是不会变化的)，需要改的代码较多
+        //把插入位置后的数据往后挪，并预留prevlen占用内存的差异
         memmove(p+reqlen,p-nextdiff,curlen-offset-1+nextdiff);
 
         /* Encode this entry's raw length in the next entry. */
@@ -988,6 +998,7 @@ unsigned char *__ziplistInsert(unsigned char *zl, unsigned char *p, unsigned cha
          * "nextdiff" in account as well. Otherwise, a change in the
          * size of prevlen doesn't have an effect on the *tail* offset. */
         assert(zipEntrySafe(zl, newlen, p+reqlen, &tail, 1));
+        //暂时没明白为什么是这么加 p是插入点 + 插入要求的长度  + 加尾部的entry长度，
         if (p[reqlen+tail.headersize+tail.len] != ZIP_END) {
             ZIPLIST_TAIL_OFFSET(zl) =
                 intrev32ifbe(intrev32ifbe(ZIPLIST_TAIL_OFFSET(zl))+nextdiff);
